@@ -1,6 +1,6 @@
 pub mod check;
 
-use crate::check::{all_item_keys, parse_file as parse_check_file, transform, write_csv};
+use crate::check::{all_item_keys, parse_csv, parse_xlsx, transform, write_csv};
 use serde::Deserialize;
 use std::fs;
 
@@ -39,11 +39,19 @@ pub fn run(args: Args) {
     println!("Using {:?}", mapping);
     assert!(
         !mapping.fixed_header.is_empty(),
-        "fixed_header must have at least one columen."
+        "fixed_header must have at least 1 column."
     );
 
+    assert!(
+        args.check_file.ends_with(".csv") || args.check_file.ends_with(".xlsx"),
+        "only 'csv' or 'xlsx' file can be parsed."
+    );
     println!("Reading '{}' ...", args.check_file);
-    let checks = parse_check_file(&args.check_file).unwrap();
+    let checks = if args.check_file.ends_with(".xlsx") {
+        parse_xlsx(&args.check_file, mapping.clone()).unwrap()
+    } else {
+        parse_csv(&args.check_file, mapping.clone()).unwrap()
+    };
 
     println!("Transforming ...");
     let item_keys = all_item_keys(checks.clone(), mapping.clone());

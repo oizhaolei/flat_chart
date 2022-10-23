@@ -1,9 +1,18 @@
 use flat_chart::{
-    check::{all_item_keys, parse_file, transform, write_csv},
+    check::{all_item_keys, parse_csv, parse_xlsx, transform, write_csv},
     parse_mapping_file, Mapping,
 };
 
 use std::collections::HashMap;
+
+#[test]
+fn test_csv_reader() {
+    let mapping: Mapping = parse_mapping_file("./tests/mapping.toml");
+    let data = parse_csv("data/check.csv", mapping);
+    assert!(data.is_ok());
+    let lines = data.unwrap();
+    assert_eq!(lines.len(), 25);
+}
 
 #[test]
 fn test_transform() {
@@ -651,9 +660,9 @@ fn test_transform() {
 
 #[test]
 fn test_all_item_keys() {
-    let checks = parse_file("data/-20220831　タイチン採血データ.xlsx").unwrap();
-    assert_eq!(checks.len(), 97307);
     let mapping: Mapping = parse_mapping_file("./tests/mapping.toml");
+    let checks = parse_xlsx("data/-20220831　タイチン採血データ.xlsx", mapping.clone()).unwrap();
+    assert_eq!(checks.len(), 97307);
     let item_keys = all_item_keys(checks, mapping);
     assert_eq!(523, item_keys.len());
 }

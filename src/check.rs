@@ -1,4 +1,4 @@
-use csv::Writer;
+use csv::{Reader as CsvReader, Writer};
 use std::{
     collections::{HashMap, HashSet},
     error::Error,
@@ -9,7 +9,54 @@ use itertools::Itertools;
 
 use crate::Mapping;
 
-pub fn parse_file(check_file: &str) -> Result<Vec<HashMap<String, String>>, Box<dyn Error>> {
+fn valid_headers(mapping: Mapping, headers: Vec<String>) {
+    assert!(
+        mapping
+            .fixed_header
+            .iter()
+            .all(|f| headers.iter().find(|&h| h == f).is_some())
+            && headers
+                .iter()
+                .find(|&h| h == &mapping.flat_item_key)
+                .is_some()
+            && headers
+                .iter()
+                .find(|&h| h == &mapping.flat_item_value)
+                .is_some(),
+        "'mapping.toml' definition is invalid for data file."
+    );
+}
+
+pub fn parse_csv(
+    check_file: &str,
+    mapping: Mapping,
+) -> Result<Vec<HashMap<String, String>>, Box<dyn Error>> {
+    let mut checks: Vec<HashMap<String, String>> = Vec::new();
+    let mut rdr = CsvReader::from_path(check_file)?;
+    let headers: Vec<String> = rdr.headers()?.into_iter().map(|f| f.to_string()).collect();
+    println!("Header: {:?}", headers);
+    //header valid check
+    valid_headers(mapping, headers.clone());
+
+    let mut rdr = CsvReader::from_path(check_file)?;
+    for result in rdr.records() {
+        let record = result?;
+        let mut line: HashMap<String, String> = HashMap::new();
+        for col in 0..record.len() {
+            line.insert(
+                headers.get(col).unwrap().to_string(),
+                record.get(col).unwrap().trim().to_string(),
+            );
+        }
+        checks.push(line.clone());
+    }
+    println!("(row, col): ({}, {})", checks.len(), headers.len());
+    Ok(checks)
+}
+pub fn parse_xlsx(
+    check_file: &str,
+    mapping: Mapping,
+) -> Result<Vec<HashMap<String, String>>, Box<dyn Error>> {
     // opens a new workbook
     let mut workbook: Xlsx<_> = open_workbook(check_file)
         .unwrap_or_else(|e| panic!("Cannot open file {}.\n{:?}", check_file, e));
@@ -28,6 +75,8 @@ pub fn parse_file(check_file: &str) -> Result<Vec<HashMap<String, String>>, Box<
                 }
             }
         }
+        //  header valid check
+        valid_headers(mapping, headers.clone());
         println!("Header: {:?}", headers);
         println!("(row, col): {:?}", range.get_size());
 
