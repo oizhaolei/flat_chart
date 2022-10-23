@@ -15,3 +15,12 @@ csv = "1.1.6"
 itertools = "0.10.5"
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.5.9"
+
+[package.metadata.rpm]
+package = "flat_chart"
+
+[package.metadata.rpm.cargo]
+buildflags = ["--release"]
+
+[package.metadata.rpm.targets]
+flat_chart = { path = "/usr/bin/flat_chart" }
